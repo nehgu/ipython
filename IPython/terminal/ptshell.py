@@ -16,7 +16,7 @@ from IPython.utils.process import abbrev_cwd
 from traitlets import Bool, CBool, Unicode, Dict
 
 from prompt_toolkit.completion import Completer, Completion
-from prompt_toolkit.enums import DEFAULT_BUFFER
+from prompt_toolkit.enums import DEFAULT_BUFFER, SEARCH_BUFFER
 from prompt_toolkit.filters import HasFocus, HasSelection, Condition
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.shortcuts import create_prompt_application, create_eventloop
@@ -181,6 +181,13 @@ class TerminalInteractiveShell(InteractiveShell):
         @kbmanager.registry.add_binding(Keys.ControlC, filter=HasFocus(DEFAULT_BUFFER))
         def _(event):
             event.current_buffer.reset()
+
+        @kbmanager.registry.add_binding(Keys.ControlC, filter=HasFocus(SEARCH_BUFFER))
+        def _(event):
+            if event.current_buffer.document.text:
+                event.current_buffer.reset()
+            else:
+                event.cli.push_focus(DEFAULT_BUFFER)
 
         supports_suspend = Condition(lambda cli: hasattr(signal, 'SIGTSTP'))
 
@@ -399,6 +406,11 @@ class TerminalInteractiveShell(InteractiveShell):
             warn('Could not open editor')
             return False
         return True
+
+    # Run !system commands directly, not through pipes, so terminal programs
+    # work correctly.
+    system = InteractiveShell.system_raw
+
 
 if __name__ == '__main__':
     TerminalInteractiveShell.instance().interact()
